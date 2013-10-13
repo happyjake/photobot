@@ -3,65 +3,140 @@ require 'flickraw-cached'
 require "json"
 require 'pathname'
 require 'micro-optparse'
-
-options = Parser.new do |p|
-   p.banner = "sync photo dirs to flickr"
-#   p.option :title, "photo title", :default => ""
-end.process!
+require 'logger'
+require 'exifr'
 
 APP_ROOT = File.expand_path(File.dirname(Pathname.new(__FILE__).realpath))
 
-conf = JSON.parse( IO.read("#{APP_ROOT}/config.json") )
-
-FlickRaw.api_key=conf['api_key']
-FlickRaw.shared_secret=conf['api_secret']
-
-flickr.access_token = conf['access_token']
-flickr.access_secret = conf['access_secret']
-
-root_dir = conf['root_dir']
-
-if root_dir.length == 0
-  abort 'no root_dir in conf file'
+class Object
+  def as
+    yield self
+  end
 end
 
-puts "root #{root_dir}"
-
-# You need to be authentified to do that, see the previous examples.
-Dir.chdir(root_dir) do
-  Dir['*'].each do |d|
-    puts "for #{d}"
-    c = {'done' => {}}
-    cpath = "#{d}/config.json"
-    if File.exist? cpath
-      c = JSON.parse( IO.read("#{d}/config.json") )
+def humanize (x)
+  i = 0
+  while x > 1024
+    i += 1
+    x /= 1024.0
     end
-    Dir.glob("#{d}/*.{jpg,jpeg,png,gif}",File::FNM_CASEFOLD).sort_by {|s| s.match(/(\d+)\.(jpg|jpeg|png|gif)/i)[1].to_i }.each do |f|
-      bf = (Pathname.new(f).relative_path_from Pathname.new(d)).to_s
-      if c['done'].has_key? bf
-        puts "skip #{f}"
-        next
+  "#{'%.2f' % x}#{'BKMGT'.chars.to_a[i]}"
+end
+
+def main
+  options = Parser.new do |p|
+     p.banner = "sync photo dirs to flickr"
+  #   p.option :title, "photo title", :default => ""
+  end.process!
+  
+  Dir.mkdir("#{APP_ROOT}/logs") unless File.exist?("#{APP_ROOT}/logs")
+  log = Logger.new( "#{APP_ROOT}/logs/sync.log", 'monthly' )
+  log.level = Logger::INFO
+  
+  $stdout.reopen("#{APP_ROOT}/logs/sync.log", "a+")
+  $stdout.sync = true
+  $stderr.reopen($stdout)
+  
+  log.info "app started"
+  
+  conf = JSON.parse( IO.read("#{APP_ROOT}/config.json") )
+  
+  FlickRaw.api_key=conf['api_key']
+  FlickRaw.shared_secret=conf['api_secret']
+  
+  flickr.access_token = conf['access_token']
+  flickr.access_secret = conf['access_secret']
+  
+  root_dir = conf['root_dir']
+  
+  if root_dir.length == 0
+    abort 'no root_dir in conf file'
+  end
+  
+  log.info "root #{root_dir}"
+  
+  # main
+  Dir.chdir(root_dir) do
+    Dir['*'].each do |d|
+      log.info "for #{d}"
+      c = {'done' => {},'unset' => []}
+      cpath = "#{d}/config.json"
+      if File.exist? cpath
+        c = JSON.parse( IO.read("#{d}/config.json") )
+        c['unset'] = [] if not c.has_key? 'unset'
       end
-      puts "uploading #{f}"
-      photoID = flickr.upload_photo f, :is_public => 0 , :is_friend => 0 , :is_family => 0 , :hidden => 2
-      if photoID
-        c['done'][bf] = photoID
+
+      save_conf = lambda {
+        IO.write("#{d}/config.json",JSON.pretty_generate(c))
+      }
+
+      add_to_set = lambda {|photoID| 
         # create photo set if not exist
         if not c['set_id']
           # create and add to set
-          puts "creating photo set #{d}"
+          log.info "creating photo set #{d}"
           s = flickr.photosets.create :title => d, :primary_photo_id => photoID
           c['set_id'] = s.id
           c['set_url'] = s.url
+          c['unset'].delete(photoID)
         else 
           # add to set
-          puts "adding to set #{d}"
+          log.info "adding to set #{d}"
           flickr.photosets.addPhoto :photoset_id => c['set_id'], :photo_id => photoID
+          c['unset'].delete(photoID)
         end
-        IO.write("#{d}/config.json",JSON.pretty_generate(c))
-      else 
-        puts "failed #{f}"
+        save_conf.call
+      }
+     
+      upload_photo = lambda {|f,bf| 
+        log.info "uploading #{f} (size #{humanize(File.stat(f).size)})"
+        photoID = flickr.upload_photo f, :is_public => 0 , :is_friend => 0 , :is_family => 0 , :hidden => 2
+        if photoID
+          c['done'][bf] = photoID
+          c['unset'].push(photoID)
+          save_conf.call
+        end
+        photoID
+      }
+
+      # add unset to set
+      while c['unset'].length > 0 
+        photoID = c['unset'][0]
+        add_to_set.call(photoID)
+      end
+
+      # find all image and video
+      Dir.glob("#{d}/*.{jpg,jpeg,png,gif,mp4,m4v,mov}",File::FNM_CASEFOLD).sort_by {|s| 
+        # EXIFR::JPEG.new(s).date_time
+        File.stat(s).as {|x| [x.ctime,x.mtime].min}
+      }.each do |f|
+        # relative path
+        bf = (Pathname.new(f).relative_path_from Pathname.new(d)).to_s
+
+        # uploaded?
+        if c['done'].has_key? bf
+          log.debug "skip #{f}"
+          next
+        end
+ 
+        # upload
+        photoID = upload_photo.call(f,bf)
+
+        # add to set
+        if photoID
+          add_to_set.call(photoID)
+        else 
+          log.info "failed #{f}"
+        end
       end
     end
   end
+end
+
+begin
+  main
+  puts "normal exit."
+rescue => e
+  puts e
+  raise e
 end
