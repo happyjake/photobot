@@ -39,7 +39,7 @@ def main
   
   log.info "app started"
   
-  conf = JSON.parse( IO.read("#{APP_ROOT}/config.json") )
+  conf = JSON.parse( IO.read("#{APP_ROOT}/config.json",:encoding => 'utf-8') )
   
   FlickRaw.api_key=conf['api_key']
   FlickRaw.shared_secret=conf['api_secret']
@@ -58,11 +58,11 @@ def main
   # main
   Dir.chdir(root_dir) do
     Dir['*'].each do |d|
-      log.info "for #{d}"
+      log.debug "for #{d}"
       c = {'done' => {},'unset' => []}
       cpath = "#{d}/config.json"
       if File.exist? cpath
-        c = JSON.parse( IO.read("#{d}/config.json") )
+        c = JSON.parse( IO.read("#{d}/config.json",:encoding => 'utf-8') )
         c['unset'] = [] if not c.has_key? 'unset'
       end
 
@@ -123,7 +123,7 @@ def main
         photoID = upload_photo.call(f,bf)
 
         # add to set
-        if photoID
+        if photoID and photoID.is_a? String
           add_to_set.call(photoID)
         else 
           log.info "failed #{f}"
