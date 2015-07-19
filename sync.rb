@@ -1,4 +1,4 @@
-#! /bin/env ruby
+#!/usr/bin/ruby 
 require 'flickraw-cached'
 require "json"
 require 'pathname'
