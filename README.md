@@ -18,6 +18,6 @@ content of `/data/config.json`
       "access_secret": "<access secret>"
     }
 
-you can find the `api_key` and and `api_secret` in you flickr [account settings](***REMOVED***).
+you can find the `api_key` and and `api_secret` in you flickr [account settings](https://www.flickr.com/services/api/keys/).
 
 the `access_token` and `access_secret` is generated with the `login.rb` cmd.
