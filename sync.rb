@@ -7,6 +7,7 @@ require 'logger'
 require 'exifr'
 
 APP_ROOT = File.expand_path(File.dirname(Pathname.new(__FILE__).realpath))
+DATA_ROOT = ENV['DATA_ROOT'] or '/data/photos'
 
 class Object
   def as
@@ -29,17 +30,17 @@ def main
   #   p.option :title, "photo title", :default => ""
   end.process!
   
-  Dir.mkdir("#{APP_ROOT}/logs") unless File.exist?("#{APP_ROOT}/logs")
-  log = Logger.new( "#{APP_ROOT}/logs/sync.log", 'monthly' )
+  Dir.mkdir("#{DATA_ROOT}/logs") unless File.exist?("#{DATA_ROOT}/logs")
+  log = Logger.new( "#{DATA_ROOT}/logs/sync.log", 'monthly' )
   log.level = Logger::INFO
   
-  $stdout.reopen("#{APP_ROOT}/logs/sync.log", "a+")
+  $stdout.reopen("#{DATA_ROOT}/logs/sync.log", "a+")
   $stdout.sync = true
   $stderr.reopen($stdout)
   
   log.info "app started"
   
-  conf = JSON.parse( IO.read("#{APP_ROOT}/config.json",:encoding => 'utf-8') )
+  yonf = JSON.parse( IO.read("#{DATA_ROOT}/config.json",:encoding => 'utf-8') )
   
   FlickRaw.api_key=conf['api_key']
   FlickRaw.shared_secret=conf['api_secret']
@@ -47,10 +48,10 @@ def main
   flickr.access_token = conf['access_token']
   flickr.access_secret = conf['access_secret']
   
-  root_dir = conf['root_dir']
+  root_dir = DATA_ROOT
   
   if root_dir.length == 0
-    abort 'no root_dir in conf file'
+    abort 'no root_dir'
   end
   
   log.info "root #{root_dir}"
@@ -58,6 +59,9 @@ def main
   # main
   Dir.chdir(root_dir) do
     Dir['*'].each do |d|
+      if not File.directory?(d)
+        next
+      end
       log.debug "for #{d}"
       c = {'done' => {},'unset' => []}
       cpath = "#{d}/config.json"

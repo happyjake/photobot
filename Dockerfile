@@ -16,7 +16,9 @@ RUN \
   /bin/bash -l -c 'gem install flickraw-cached micro-optparse exifr'
 
 RUN mkdir -p /root/photobot/
+RUN mkdir -p /data/photos
 ADD ./config.json /root/photobot/
 ADD ./sync.rb /root/photobot/
+ADD ./login.rb /root/photobot/
 
 CMD ["/root/photobot/sync.rb"]

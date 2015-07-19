@@ -3,8 +3,9 @@ require 'flickraw'
 require "json"
 
 APP_ROOT = File.expand_path(File.join(File.dirname(__FILE__), '.'))
+DATA_ROOT = ENV['DATA_ROOT'] or '/data/photos'
 
-conf = JSON.parse( IO.read("#{APP_ROOT}/config.json") )
+conf = JSON.parse( IO.read("#{DATA_ROOT}/config.json") )
 
 FlickRaw.api_key=conf['api_key']
 FlickRaw.shared_secret=conf['api_secret']
@@ -25,8 +26,8 @@ begin
   puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
   conf['access_token'] = flickr.access_token
   conf['access_secret'] = flickr.access_secret
-  IO.write("#{APP_ROOT}/config.json",JSON.pretty_generate(conf))
-  puts "saved to #{APP_ROOT}/config.json"
+  IO.write("#{DATA_ROOT}/config.json",JSON.pretty_generate(conf))
+  puts "saved to #{DATA_ROOT}/config.json"
 rescue FlickRaw::FailedResponse => e
   puts "Authentication failed : #{e.msg}"
 end
