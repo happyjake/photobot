@@ -59,7 +59,7 @@ def main
   # main
   Dir.chdir(root_dir) do
     Dir['*'].each do |d|
-      if not File.directory?(d)
+      if not File.directory?(d) or d == 'logs'
         next
       end
       log.debug "for #{d}"
@@ -135,11 +135,11 @@ def main
       end
     end
   end
+  log.info "normal exit."
 end
 
 begin
   main
-  puts "normal exit."
 rescue => e
   puts e
   raise e
