@@ -1,3 +1,5 @@
+DATAROOT = /Volumes/photos
+
 .PHONY : all build run logs
 
 all: build
@@ -13,7 +15,7 @@ mount:
 	boot2docker ssh "sudo mount -t vboxsf -o uid=1000,gid=50 Volumes /Volumes"
 
 run:
-	docker run -ti --rm -v "$$(pwd)/data":/data/photos photobot_img
+	docker run -ti --rm -v "$(DATAROOT)":/data/photos photobot_img
 
 logs:
 	cat data/logs/sync.log
