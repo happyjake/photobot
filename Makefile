@@ -1,4 +1,4 @@
-DATAROOT = /Volumes/Tiza/photos
+DATAROOT = /Volumes/photos
 
 .PHONY : all build run logs
 
