@@ -11,13 +11,15 @@ ENV LC_ALL en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 RUN dpkg-reconfigure locales
 
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN apt-get install -y ruby
 RUN \
   /bin/bash -l -c 'gem install flickraw-cached micro-optparse exifr'
 
 RUN mkdir -p /root/photobot/
 RUN mkdir -p /data/photos
-ADD ./config.json /root/photobot/
 ADD ./sync.rb /root/photobot/
 ADD ./login.rb /root/photobot/
 

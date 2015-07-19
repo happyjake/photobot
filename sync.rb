@@ -7,7 +7,7 @@ require 'logger'
 require 'exifr'
 
 APP_ROOT = File.expand_path(File.dirname(Pathname.new(__FILE__).realpath))
-DATA_ROOT = ENV['DATA_ROOT'] or '/data/photos'
+DATA_ROOT = '/data/photos'
 
 class Object
   def as
@@ -40,7 +40,7 @@ def main
   
   log.info "app started"
   
-  yonf = JSON.parse( IO.read("#{DATA_ROOT}/config.json",:encoding => 'utf-8') )
+  conf = JSON.parse( IO.read("#{DATA_ROOT}/config.json",:encoding => 'utf-8') )
   
   FlickRaw.api_key=conf['api_key']
   FlickRaw.shared_secret=conf['api_secret']
