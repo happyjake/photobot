@@ -3,7 +3,7 @@ require 'flickraw'
 require "json"
 
 APP_ROOT = File.expand_path(File.join(File.dirname(__FILE__), '.'))
-DATA_ROOT = ENV['DATA_ROOT'] or '/data/photos'
+DATA_ROOT = '/data/photos'
 
 conf = JSON.parse( IO.read("#{DATA_ROOT}/config.json") )
 
