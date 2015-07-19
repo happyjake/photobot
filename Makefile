@@ -12,10 +12,13 @@ mount:
 	VBoxManage sharedfolder add boot2docker-vm -name Volumes -hostpath /Volumes
 	boot2docker up
 	boot2docker ssh "sudo mkdir /Volumes"
-	boot2docker ssh "sudo mount -t vboxsf -o uid=1000,gid=50 Volumes /Volumes"
+	boot2docker ssh "sudo mount -t vboxsf -o uid=1000,gid=50,,iocharset=utf8 Volumes /Volumes"
 
 run:
 	docker run -ti --rm -v "$(DATAROOT)":/data/photos photobot_img
+
+shell:
+	docker run -ti --rm -v $(DATAROOT):/data/photos photobot_img bash
 
 logs:
 	cat "$(DATAROOT)/logs/sync.log"
