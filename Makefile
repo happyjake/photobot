@@ -18,4 +18,4 @@ run:
 	docker run -ti --rm -v "$(DATAROOT)":/data/photos photobot_img
 
 logs:
-	cat data/logs/sync.log
+	cat "$(DATAROOT)/logs/sync.log"
