@@ -22,5 +22,6 @@ RUN mkdir -p /root/photobot/
 RUN mkdir -p /data/photos
 ADD ./sync.rb /root/photobot/
 ADD ./login.rb /root/photobot/
+ADD ./start-sync.sh /root/photobot/
 
-CMD ["/root/photobot/sync.rb"]
+CMD ["/root/photobot/start-sync.sh"]

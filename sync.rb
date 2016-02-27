@@ -140,6 +140,7 @@ end
 
 begin
   main
+  exit 0
 rescue => e
   puts e
   raise e
