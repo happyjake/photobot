@@ -23,4 +23,6 @@ RUN mkdir -p /data/photos
 ADD ./sync.rb /root/photobot/
 ADD ./login.rb /root/photobot/
 
+VOLUME /data/photos
+
 CMD ["/root/photobot/sync.rb"]
