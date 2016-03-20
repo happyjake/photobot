@@ -24,4 +24,6 @@ ADD ./sync.rb /root/photobot/
 ADD ./login.rb /root/photobot/
 ADD ./start-sync.sh /root/photobot/
 
+VOLUME /data/photos
+
 CMD ["/root/photobot/start-sync.sh"]

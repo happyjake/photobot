@@ -5,9 +5,18 @@ require 'pathname'
 require 'micro-optparse'
 require 'logger'
 require 'exifr'
+require 'time'
 
 APP_ROOT = File.expand_path(File.dirname(Pathname.new(__FILE__).realpath))
 DATA_ROOT = '/data/photos'
+
+DOING = 'doing'
+DONE = 'done'
+UNSET = 'unset'
+SET_ID = 'set_id'
+SET_URL = 'set_url'
+FAIL_COUNT = 'fail_count'
+LAST_UPLOAD_TIME = 'last_upload_time'
 
 class Object
   def as
@@ -63,11 +72,11 @@ def main
         next
       end
       log.debug "for #{d}"
-      c = {'done' => {},'unset' => []}
+      c = { DONE => {}, UNSET => []}
       cpath = "#{d}/config.json"
       if File.exist? cpath
         c = JSON.parse( IO.read("#{d}/config.json",:encoding => 'utf-8') )
-        c['unset'] = [] if not c.has_key? 'unset'
+        c[UNSET] = [] if not c.has_key? UNSET
       end
 
       save_conf = lambda {
@@ -76,36 +85,42 @@ def main
 
       add_to_set = lambda {|photoID| 
         # create photo set if not exist
-        if not c['set_id']
+        if not c[SET_ID]
           # create and add to set
           log.info "creating photo set #{d}"
           s = flickr.photosets.create :title => d, :primary_photo_id => photoID
-          c['set_id'] = s.id
-          c['set_url'] = s.url
-          c['unset'].delete(photoID)
+          c[SET_ID] = s.id
+          c[SET_URL] = s.url
+          c[UNSET].delete(photoID)
         else 
           # add to set
           log.info "adding to set #{d}"
-          flickr.photosets.addPhoto :photoset_id => c['set_id'], :photo_id => photoID
-          c['unset'].delete(photoID)
+          flickr.photosets.addPhoto :photoset_id => c[SET_ID], :photo_id => photoID
+          c[UNSET].delete(photoID)
         end
         save_conf.call
       }
      
       upload_photo = lambda {|f,bf| 
         log.info "uploading #{f} (size #{humanize(File.stat(f).size)})"
+
+        c[DOING][bf][FAIL_COUNT] = c[DOING][bf][FAIL_COUNT] + 1
+        c[DOING][bf][LAST_UPLOAD_TIME] = "#{Time.now}"
+        save_conf.call
+
         photoID = flickr.upload_photo f, :is_public => 0 , :is_friend => 0 , :is_family => 0 , :hidden => 2
         if photoID
-          c['done'][bf] = photoID
-          c['unset'].push(photoID)
+          c[DONE][bf] = photoID
+          c[UNSET].push(photoID)
+          c[DOING].delete(bf)
           save_conf.call
         end
         photoID
       }
 
       # add unset to set
-      while c['unset'].length > 0 
-        photoID = c['unset'][0]
+      while c[UNSET].length > 0 
+        yhotoID = c[UNSET][0]
         add_to_set.call(photoID)
       end
 
@@ -118,11 +133,25 @@ def main
         bf = (Pathname.new(f).relative_path_from Pathname.new(d)).to_s
 
         # uploaded?
-        if c['done'].has_key? bf
+        if c[DONE].has_key? bf
           log.debug "skip #{f}"
           next
         end
  
+        # try count. or skip files that always fail.
+        c[DOING] = {} if not c.has_key? DOING
+        c[DOING][bf] = { FAIL_COUNT => 0, LAST_UPLOAD_TIME => '' } if not c[DOING].has_key? bf
+
+        if c[DOING][bf][FAIL_COUNT] >= 3
+          # retry one more time every 3 days
+          if Time.now - Time.parse(c[DOING][bf][LAST_UPLOAD_TIME]) >= 3*24*60*60
+            log.info "retry #{f}. last fail is on #{c[DOING][bf][LAST_UPLOAD_TIME]}."
+          else
+            log.info "skip #{f}. tried too much recently. try count #{c[DOING][bf][FAIL_COUNT]}"
+            next
+          end
+        end
+
         # upload
         photoID = upload_photo.call(f,bf)
 

@@ -1,4 +1,4 @@
-DATAROOT = /Volumes/photos
+DATAROOT = /Volumes/photo
 
 .PHONY : all build run logs
 
@@ -8,17 +8,18 @@ build:
 	docker build -t photobot_img .
 
 mount:
-	boot2docker down
-	VBoxManage sharedfolder add boot2docker-vm -name Volumes -hostpath /Volumes
-	boot2docker up
-	boot2docker ssh "sudo mkdir /Volumes"
-	boot2docker ssh "sudo mount -t vboxsf -o uid=1000,gid=50,,iocharset=utf8 Volumes /Volumes"
+	echo "mount with /Volumes enable on osx. use script from [here](git@github.com:happyjake/docker_home.git)."
+	#docker-machine ssh "sudo mkdir /Volumes"
+	#docker-machine ssh "sudo mount -t vboxsf -o uid=1000,gid=50,,iocharset=utf8 Volumes /Volumes"
 
 run:
-	docker run -ti --rm -v "$(DATAROOT)":/data/photos photobot_img
+	docker run --privileged -ti --rm -v "$(DATAROOT)":/data/photos photobot_img
+
+test:
+	docker run --privileged -ti --rm -v "$(DATAROOT)":/data/photos ubuntu
 
 shell:
-	docker run -ti --rm -v $(DATAROOT):/data/photos photobot_img bash
+	docker run --privileged -ti --rm -v $(DATAROOT):/data/photos photobot_img bash
 
 logs:
 	cat "$(DATAROOT)/logs/sync.log"
