@@ -147,7 +147,7 @@ def main
           if Time.now - Time.parse(c[DOING][bf][LAST_UPLOAD_TIME]) >= 3*24*60*60
             log.info "retry #{f}. last fail is on #{c[DOING][bf][LAST_UPLOAD_TIME]}."
           else
-            log.info "skip #{f}. tried too much recently. try count #{c[DOING][bf][FAIL_COUNT]}"
+            #log.info "skip #{f}. tried too much recently. try count #{c[DOING][bf][FAIL_COUNT]}"
             next
           end
         end
